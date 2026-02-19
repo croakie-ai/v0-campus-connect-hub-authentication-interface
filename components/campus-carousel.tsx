@@ -127,13 +127,13 @@ export function CampusCarousel() {
         </div>
 
         {/* Carousel container */}
-        <div className="relative flex h-[55vh] flex-1 items-center justify-center lg:h-[70vh]">
+        <div className="relative flex h-[60vh] flex-1 items-center justify-center lg:h-[75vh]">
           {campusImages.map((image, index) => {
             const style = getImageStyle(index)
             return (
               <div
                 key={image.src}
-                className="absolute h-[240px] w-[380px] overflow-hidden rounded-2xl shadow-2xl transition-all duration-700 ease-in-out lg:h-[300px] lg:w-[480px] xl:h-[340px] xl:w-[540px]"
+                className="absolute h-[280px] w-[440px] overflow-hidden rounded-2xl shadow-2xl transition-all duration-700 ease-in-out lg:h-[360px] lg:w-[560px] xl:h-[400px] xl:w-[640px]"
                 style={{
                   ...style,
                   transformStyle: "preserve-3d",
@@ -145,7 +145,7 @@ export function CampusCarousel() {
                   fill
                   className="object-cover"
                   priority={index === 0}
-                  sizes="(max-width: 1024px) 380px, 540px"
+                  sizes="(max-width: 1024px) 440px, 640px"
                 />
                 {/* Gradient overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
