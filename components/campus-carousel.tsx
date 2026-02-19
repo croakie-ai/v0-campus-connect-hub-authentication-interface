@@ -62,7 +62,7 @@ export function CampusCarousel() {
 
     if (isCenter) {
       return {
-        transform: "translateX(0) scale(1) perspective(1000px) rotateY(0deg)",
+        transform: "translateY(0) scale(1) perspective(1000px) rotateX(0deg)",
         zIndex: 30,
         opacity: 1,
         filter: "blur(0px) brightness(1)",
@@ -71,23 +71,23 @@ export function CampusCarousel() {
     if (isAdjacent) {
       const direction = wrappedDiff > 0 ? 1 : -1
       return {
-        transform: `translateX(${direction * 60}%) scale(0.78) perspective(1000px) rotateY(${direction * -8}deg)`,
+        transform: `translateY(${direction * 55}%) scale(0.82) perspective(1000px) rotateX(${direction * 6}deg)`,
         zIndex: 20,
-        opacity: 0.6,
-        filter: "blur(3px) brightness(0.6)",
+        opacity: 0.55,
+        filter: "blur(3px) brightness(0.55)",
       }
     }
     if (isSecondary) {
       const direction = wrappedDiff > 0 ? 1 : -1
       return {
-        transform: `translateX(${direction * 110}%) scale(0.6) perspective(1000px) rotateY(${direction * -12}deg)`,
+        transform: `translateY(${direction * 100}%) scale(0.65) perspective(1000px) rotateX(${direction * 10}deg)`,
         zIndex: 10,
-        opacity: 0.3,
+        opacity: 0.25,
         filter: "blur(6px) brightness(0.4)",
       }
     }
     return {
-      transform: "translateX(0) scale(0.4)",
+      transform: "translateY(0) scale(0.4)",
       zIndex: 0,
       opacity: 0,
       filter: "blur(10px) brightness(0.3)",
@@ -102,67 +102,70 @@ export function CampusCarousel() {
         <div className="absolute bottom-1/4 right-1/4 h-80 w-80 rounded-full bg-primary/5 blur-[100px]" />
       </div>
 
-      {/* Carousel container */}
-      <div className="relative flex h-[55vh] w-full items-center justify-center lg:h-[65vh]">
-        {campusImages.map((image, index) => {
-          const style = getImageStyle(index)
-          return (
-            <div
-              key={image.src}
-              className="absolute h-[340px] w-[480px] overflow-hidden rounded-2xl shadow-2xl transition-all duration-700 ease-in-out lg:h-[400px] lg:w-[560px]"
-              style={{
-                ...style,
-                transformStyle: "preserve-3d",
+      {/* Carousel + side indicators */}
+      <div className="relative flex w-full items-center justify-center gap-6">
+        {/* Vertical dots indicator */}
+        <div className="relative z-40 flex flex-col items-center gap-2">
+          {campusImages.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => {
+                if (!isTransitioning) {
+                  setIsTransitioning(true)
+                  setActiveIndex(index)
+                  setTimeout(() => setIsTransitioning(false), 700)
+                }
               }}
-            >
-              <Image
-                src={image.src}
-                alt={image.alt}
-                fill
-                className="object-cover"
-                priority={index === 0}
-                sizes="(max-width: 1024px) 480px, 560px"
-              />
-              {/* Gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
-            </div>
-          )
-        })}
+              className={`w-1.5 rounded-full transition-all duration-500 ${
+                index === activeIndex
+                  ? "h-8 bg-primary"
+                  : "h-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
+
+        {/* Carousel container */}
+        <div className="relative flex h-[55vh] flex-1 items-center justify-center lg:h-[70vh]">
+          {campusImages.map((image, index) => {
+            const style = getImageStyle(index)
+            return (
+              <div
+                key={image.src}
+                className="absolute h-[240px] w-[380px] overflow-hidden rounded-2xl shadow-2xl transition-all duration-700 ease-in-out lg:h-[300px] lg:w-[480px] xl:h-[340px] xl:w-[540px]"
+                style={{
+                  ...style,
+                  transformStyle: "preserve-3d",
+                }}
+              >
+                <Image
+                  src={image.src}
+                  alt={image.alt}
+                  fill
+                  className="object-cover"
+                  priority={index === 0}
+                  sizes="(max-width: 1024px) 380px, 540px"
+                />
+                {/* Gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       {/* Caption */}
-      <div className="relative z-40 mt-4 text-center">
+      <div className="relative z-40 mt-2 text-center">
         <p
           className="font-[family-name:var(--font-heading)] text-2xl font-bold tracking-tight text-foreground transition-all duration-500 lg:text-3xl"
           key={activeIndex}
         >
           {campusImages[activeIndex].caption}
         </p>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-1.5 text-sm text-muted-foreground">
           Discover a world of opportunities
         </p>
-      </div>
-
-      {/* Dots indicator */}
-      <div className="relative z-40 mt-6 flex items-center gap-2">
-        {campusImages.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => {
-              if (!isTransitioning) {
-                setIsTransitioning(true)
-                setActiveIndex(index)
-                setTimeout(() => setIsTransitioning(false), 700)
-              }
-            }}
-            className={`h-1.5 rounded-full transition-all duration-500 ${
-              index === activeIndex
-                ? "w-8 bg-primary"
-                : "w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50"
-            }`}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
       </div>
     </div>
   )
