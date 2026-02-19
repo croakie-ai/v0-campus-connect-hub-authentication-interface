@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useRef, useCallback, useState, useEffect } from "react"
 import Image from "next/image"
 
 const campusImages = [
@@ -33,34 +33,79 @@ const campusImages = [
 
 export function CampusCarousel() {
   const [activeIndex, setActiveIndex] = useState(0)
-  const [isTransitioning, setIsTransitioning] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const isDragging = useRef(false)
+  const startY = useRef(0)
+  const currentY = useRef(0)
 
-  const goToNext = useCallback(() => {
-    if (isTransitioning) return
-    setIsTransitioning(true)
-    setActiveIndex((prev) => (prev + 1) % campusImages.length)
-    setTimeout(() => setIsTransitioning(false), 700)
-  }, [isTransitioning])
+  const goTo = useCallback((index: number) => {
+    const clamped = Math.max(0, Math.min(campusImages.length - 1, index))
+    setActiveIndex(clamped)
+  }, [])
 
+  // Wheel scroll handler
+  const wheelTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      e.preventDefault()
+      if (wheelTimeout.current) return
+      const direction = e.deltaY > 0 ? 1 : -1
+      goTo(activeIndex + direction)
+      wheelTimeout.current = setTimeout(() => {
+        wheelTimeout.current = null
+      }, 500)
+    },
+    [activeIndex, goTo]
+  )
+
+  // Touch / pointer drag handlers
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    isDragging.current = true
+    startY.current = e.clientY
+    currentY.current = e.clientY
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+  }, [])
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!isDragging.current) return
+    currentY.current = e.clientY
+  }, [])
+
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      if (!isDragging.current) return
+      isDragging.current = false
+      const deltaY = startY.current - currentY.current
+      const threshold = 40
+      if (Math.abs(deltaY) > threshold) {
+        goTo(activeIndex + (deltaY > 0 ? 1 : -1))
+      }
+      ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
+    },
+    [activeIndex, goTo]
+  )
+
+  // Keyboard support
   useEffect(() => {
-    const interval = setInterval(goToNext, 4000)
-    return () => clearInterval(interval)
-  }, [goToNext])
+    const el = containerRef.current
+    if (!el) return
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+        e.preventDefault()
+        goTo(activeIndex + 1)
+      } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+        e.preventDefault()
+        goTo(activeIndex - 1)
+      }
+    }
+    el.addEventListener("keydown", handleKey)
+    return () => el.removeEventListener("keydown", handleKey)
+  }, [activeIndex, goTo])
 
   const getImageStyle = (index: number) => {
     const diff = index - activeIndex
-    const wrappedDiff =
-      diff > campusImages.length / 2
-        ? diff - campusImages.length
-        : diff < -campusImages.length / 2
-          ? diff + campusImages.length
-          : diff
 
-    const isCenter = wrappedDiff === 0
-    const isAdjacent = Math.abs(wrappedDiff) === 1
-    const isSecondary = Math.abs(wrappedDiff) === 2
-
-    if (isCenter) {
+    if (diff === 0) {
       return {
         transform: "translateY(0) scale(1) perspective(1000px) rotateX(0deg)",
         zIndex: 30,
@@ -68,8 +113,8 @@ export function CampusCarousel() {
         filter: "blur(0px) brightness(1)",
       }
     }
-    if (isAdjacent) {
-      const direction = wrappedDiff > 0 ? 1 : -1
+    if (Math.abs(diff) === 1) {
+      const direction = diff > 0 ? 1 : -1
       return {
         transform: `translateY(${direction * 55}%) scale(0.82) perspective(1000px) rotateX(${direction * 6}deg)`,
         zIndex: 20,
@@ -77,8 +122,8 @@ export function CampusCarousel() {
         filter: "blur(3px) brightness(0.55)",
       }
     }
-    if (isSecondary) {
-      const direction = wrappedDiff > 0 ? 1 : -1
+    if (Math.abs(diff) === 2) {
+      const direction = diff > 0 ? 1 : -1
       return {
         transform: `translateY(${direction * 100}%) scale(0.65) perspective(1000px) rotateX(${direction * 10}deg)`,
         zIndex: 10,
@@ -86,8 +131,9 @@ export function CampusCarousel() {
         filter: "blur(6px) brightness(0.4)",
       }
     }
+    const direction = diff > 0 ? 1 : -1
     return {
-      transform: "translateY(0) scale(0.4)",
+      transform: `translateY(${direction * 140}%) scale(0.4)`,
       zIndex: 0,
       opacity: 0,
       filter: "blur(10px) brightness(0.3)",
@@ -95,7 +141,19 @@ export function CampusCarousel() {
   }
 
   return (
-    <div className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden">
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden outline-none"
+      onWheel={handleWheel}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      style={{ touchAction: "none" }}
+      role="region"
+      aria-label="Campus image carousel"
+      aria-roledescription="carousel"
+    >
       {/* Ambient glow effects */}
       <div className="pointer-events-none absolute inset-0 z-0">
         <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-primary/10 blur-[120px]" />
@@ -109,13 +167,7 @@ export function CampusCarousel() {
           {campusImages.map((_, index) => (
             <button
               key={index}
-              onClick={() => {
-                if (!isTransitioning) {
-                  setIsTransitioning(true)
-                  setActiveIndex(index)
-                  setTimeout(() => setIsTransitioning(false), 700)
-                }
-              }}
+              onClick={() => goTo(index)}
               className={`w-1.5 rounded-full transition-all duration-500 ${
                 index === activeIndex
                   ? "h-8 bg-primary"
@@ -127,7 +179,7 @@ export function CampusCarousel() {
         </div>
 
         {/* Carousel container */}
-        <div className="relative flex h-[65vh] flex-1 items-center justify-center lg:h-[80vh]">
+        <div className="relative flex h-[65vh] flex-1 items-center justify-center select-none lg:h-[80vh]">
           {campusImages.map((image, index) => {
             const style = getImageStyle(index)
             return (
@@ -138,14 +190,16 @@ export function CampusCarousel() {
                   ...style,
                   transformStyle: "preserve-3d",
                 }}
+                aria-hidden={index !== activeIndex}
               >
                 <Image
                   src={image.src}
                   alt={image.alt}
                   fill
-                  className="object-cover"
+                  className="pointer-events-none object-cover"
                   priority={index === 0}
                   sizes="(max-width: 1024px) 500px, 740px"
+                  draggable={false}
                 />
                 {/* Gradient overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
